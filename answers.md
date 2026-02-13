@@ -12,33 +12,10 @@
 alert("Иван"); // Замени на своё имя
 ```
 
-### Задание 2: Диалог с пользователем
+### Задание 2: Первый console.log
 
 ```javascript
-let name = prompt("Как тебя зовут?");
-let age = prompt("Сколько тебе лет?");
-console.log("Привет, " + name + "! Тебе " + age + " лет.");
-```
-
-### Задание 3: Моя первая HTML-страница
-
-```html
-<!DOCTYPE html>
-<html>
-  <body>
-    <h1>Иван</h1>
-    <button onclick="changeColor()">Сменить цвет фона</button>
-
-    <script>
-      function changeColor() {
-        const r = Math.floor(Math.random() * 256);
-        const g = Math.floor(Math.random() * 256);
-        const b = Math.floor(Math.random() * 256);
-        document.body.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
-      }
-    </script>
-  </body>
-</html>
+console.log("Привет, мир!");
 ```
 
 ---
