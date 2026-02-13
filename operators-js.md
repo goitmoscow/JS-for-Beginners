@@ -255,12 +255,12 @@ console.log(!!{}); // true
 
 ## 🎯 Таблица истинности
 
-| A     | B     | A && B | A     |       | B   | !A  |
-| ----- | ----- | ------ | ----- | ----- | --- | --- |
-| true  | true  | true   | true  | false |
-| true  | false | false  | true  | false |
-| false | true  | false  | true  | true  |
-| false | false | false  | false | true  |
+| A     | B     | A `&&` B | A `\|\|` B | `!`A  |
+| ----- | ----- | -------- | ---------- | ----- |
+| true  | true  | true     | true       | false |
+| true  | false | false    | true       | false |
+| false | true  | false    | true       | true  |
+| false | false | false    | false      | true  |
 
 ## 🎭 Truthy и Falsy значения
 
