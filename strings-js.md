@@ -244,7 +244,7 @@ let str3 = number.toString(); // "42"
 let str4 = "" + number; // "42"
 
 // Для объектов
-let person = { имя: "Вася" };
+let person = { name: "Вася" };
 console.log(person.toString()); // "[object Object]"
 ```
 

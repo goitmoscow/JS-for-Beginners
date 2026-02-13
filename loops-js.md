@@ -131,17 +131,17 @@ for (let [index, color] of colors.entries()) {
 
 ```javascript
 let person = {
-  имя: "Елена",
-  возраст: 28,
-  город: "Москва",
+  name: "Елена",
+  age: 28,
+  city: "Москва",
 };
 
 for (let key in person) {
   console.log(`${key}: ${person[key]}`);
 }
-// имя: Елена
-// возраст: 28
-// город: Москва
+// name: Елена
+// age: 28
+// city: Москва
 ```
 
 ### ⚠️ Внимание: for...in и массивы!
@@ -393,9 +393,9 @@ for (let i = 1; i <= size; i++) {
 
 ```javascript
 let users = [
-  { id: 1, имя: "Анна", возраст: 25 },
-  { id: 2, имя: "Борис", возраст: 30 },
-  { id: 3, имя: "Виктор", возраст: 35 },
+  { id: 1, name: "Анна", age: 25 },
+  { id: 2, name: "Борис", age: 30 },
+  { id: 3, name: "Виктор", age: 35 },
 ];
 
 let searchId = 2;
@@ -409,7 +409,7 @@ for (let user of users) {
 }
 
 if (foundUser) {
-  console.log(`Найден: ${foundUser.имя}`);
+  console.log(`Найден: ${foundUser.name}`);
 } else {
   console.log("Пользователь не найден");
 }

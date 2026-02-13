@@ -53,20 +53,20 @@ const info = (name, age) => {
 ```javascript
 // ❌ Обычная функция - свой this
 const object = {
-  имя: "Анна",
-  показать_обычная: function () {
+  name: "Анна",
+  showRegular: function () {
     setTimeout(function () {
-      console.log(this.имя); // undefined (this = window)
+      console.log(this.name); // undefined (this = window)
     }, 1000);
   },
 };
 
 // ✅ Стрелочная функция - наследует this
 const object2 = {
-  имя: "Борис",
-  показать_стрелочная: function () {
+  name: "Борис",
+  showArrow: function () {
     setTimeout(() => {
-      console.log(this.имя); // "Борис" (this сохранен)
+      console.log(this.name); // "Борис" (this сохранен)
     }, 1000);
   },
 };
@@ -131,23 +131,23 @@ function createUser(name) {
   let age = 0; // Приватная переменная
 
   return {
-    установить_возраст: function (newAge) {
+    setAge: function (newAge) {
       age = newAge;
     },
-    получить_возраст: function () {
+    getAge: function () {
       return age;
     },
-    приветствовать: function () {
+    greet: function () {
       return `${name}, тебе ${age} лет`;
     },
   };
 }
 
 const anna = createUser("Анна");
-anna.установить_возраст(25);
-console.log(anna.приветствовать()); // "Анна, тебе 25 лет"
+anna.setAge(25);
+console.log(anna.greet()); // "Анна, тебе 25 лет"
 
-// анна.возраст // undefined - приватная переменная недоступна!
+// anna.age // undefined - приватная переменная недоступна!
 ```
 
 #### 🏭 Фабрика функций
@@ -206,8 +206,8 @@ function func() {
   console.log(globalVariable); // ✅ Видно
 }
 
-функция();
-console.log(глобальная_переменная); // ✅ Видно
+func();
+console.log(globalVariable); // ✅ Видно
 
 // ⚠️ Избегай глобальных переменных!
 ```
@@ -327,27 +327,27 @@ const calculator = (function () {
 
   // Публичный интерфейс
   return {
-    сложить: function (a, b) {
+    add: function (a, b) {
       let result = a + b;
       addToHistory(`${a} + ${b}`, result);
       return result;
     },
 
-    вычесть: function (a, b) {
+    subtract: function (a, b) {
       let result = a - b;
       addToHistory(`${a} - ${b}`, result);
       return result;
     },
 
-    получить_историю: function () {
+    getHistory: function () {
       return [...history]; // Возвращаем копию
     },
   };
 })();
 
-calculator.сложить(5, 3); // 8
-calculator.вычесть(10, 4); // 6
-console.log(calculator.получить_историю()); // ["5 + 3 = 8", "10 - 4 = 6"]
+calculator.add(5, 3); // 8
+calculator.subtract(10, 4); // 6
+console.log(calculator.getHistory()); // ["5 + 3 = 8", "10 - 4 = 6"]
 ```
 
 ## 🔄 Каррирование (Currying)
@@ -435,13 +435,13 @@ function createCart() {
   let totalPrice = 0;
 
   return {
-    добавить: function (name, price, quantity = 1) {
+    add: function (name, price, quantity = 1) {
       items.push({ name, price, quantity });
       totalPrice += price * quantity;
       console.log(`Добавлено: ${name} x${quantity}`);
     },
 
-    удалить: function (index) {
+    remove: function (index) {
       if (index >= 0 && index < items.length) {
         let item = items[index];
         totalPrice -= item.price * item.quantity;
@@ -450,18 +450,18 @@ function createCart() {
       }
     },
 
-    итог: function () {
+    getSummary: function () {
       return {
-        товары: [...items], // Копия для защиты
-        общая_цена: totalPrice,
-        количество_товаров: items.reduce(
+        items: [...items], // Копия для защиты
+        totalSum: totalPrice,
+        itemCount: items.reduce(
           (sum, item) => sum + item.quantity,
           0,
         ),
       };
     },
 
-    очистить: function () {
+    clear: function () {
       items = [];
       totalPrice = 0;
       console.log("Корзина очищена");
@@ -470,10 +470,10 @@ function createCart() {
 }
 
 const myCart = createCart();
-myCart.добавить("Молоко", 80, 2);
-myCart.добавить("Хлеб", 45);
-console.log(myCart.итог());
-myCart.очистить();
+myCart.add("Молоко", 80, 2);
+myCart.add("Хлеб", 45);
+console.log(myCart.getSummary());
+myCart.clear();
 ```
 
 ### 🎮 Игровой счетчик
@@ -485,7 +485,7 @@ function createGameCounter() {
   let life = 3;
 
   return {
-    увеличить_счет: function (points) {
+    addScore: function (points) {
       score += points;
       if (score >= level * 100) {
         level++;
@@ -495,7 +495,7 @@ function createGameCounter() {
       return score;
     },
 
-    потерять_жизнь: function () {
+    loseLife: function () {
       life--;
       console.log(`💔 Осталось жизней: ${life}`);
       if (life <= 0) {
@@ -505,17 +505,17 @@ function createGameCounter() {
       return true;
     },
 
-    статус: function () {
+    getStatus: function () {
       return { score, level, life };
     },
   };
 }
 
 const game = createGameCounter();
-game.увеличить_счет(50);
-game.увеличить_счет(60); // Новый уровень!
-game.потерять_жизнь();
-console.log(game.статус());
+game.addScore(50);
+game.addScore(60); // Новый уровень!
+game.loseLife();
+console.log(game.getStatus());
 ```
 
 ### 🎨 Создание компонентов (простой React-паттерн)
@@ -548,7 +548,7 @@ function createComponent(name) {
 
 const button = createComponent("Кнопка");
 button.render(document.body);
-button.setState({ нажата: true, количество: 5 });
+button.setState({ pressed: true, count: 5 });
 ```
 
 ## 🚨 Частые ошибки новичков
@@ -557,16 +557,16 @@ button.setState({ нажата: true, количество: 5 });
 
 ```javascript
 const object = {
-  значение: 10,
+  value: 10,
 
   // ❌ ПЛОХО - стрелочная функция не имеет своего this
-  показать: () => {
-    console.log(this.значение); // undefined
+  show: () => {
+    console.log(this.value); // undefined
   },
 
   // ✅ ХОРОШО - обычная функция
-  показать_правильно: function () {
-    console.log(this.значение); // 10
+  showCorrect: function () {
+    console.log(this.value); // 10
   },
 };
 ```
