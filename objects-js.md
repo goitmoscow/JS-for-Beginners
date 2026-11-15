@@ -80,12 +80,13 @@ person.age = 28; // Меняем значение
 
 ```javascript
 let person = {
-  username: "Виктор", // Пробелы в ключе!
+  "user name": "Виктор", // В этом ключе действительно есть пробел
   email: "viktor@example.com",
 };
 
-// ❌ person.username - ошибка!
-console.log(person["username"]); // ✅ "Виктор"
+// Для ключа с пробелом нужны квадратные скобки.
+// person.username — допустимый синтаксис, но это другое свойство.
+console.log(person["user name"]); // "Виктор"
 
 let key = "email";
 console.log(person[key]); // "viktor@example.com"
@@ -125,20 +126,20 @@ let student = {
   course: 3,
 };
 
-// Способ 1: !== undefined
+// Способ 1: значение не undefined (не отличает отсутствие от значения undefined)
 if (student.name !== undefined) {
   console.log("Имя есть");
 }
 
-// Способ 2: in (рекомендуется)
+// Способ 2: in — включает и унаследованные свойства
 if ("age" in student) {
   console.log("Свойство возраст есть");
 } else {
   console.log("Свойства возраст нет");
 }
 
-// Способ 3: hasOwnProperty (только собственные свойства)
-if (student.hasOwnProperty("name")) {
+// Способ 3: Object.hasOwn — только собственные свойства, даже со значением undefined
+if (Object.hasOwn(student, "name")) {
   console.log("Собственное свойство имя");
 }
 ```
@@ -178,7 +179,7 @@ complexObject.method(); // "Я функция в объекте!"
 
 ## 🔄 Обход свойств объекта
 
-### 🏃 for...in (все свойства, включая унаследованные)
+### 🏃 for...in (перечисляемые строковые свойства, включая унаследованные)
 
 ```javascript
 let phone = {
@@ -195,7 +196,7 @@ for (let key in phone) {
 // memory: 256GB
 ```
 
-### 🔑 Object.keys() (только свои свойства)
+### 🔑 Object.keys() (свои перечисляемые строковые ключи)
 
 ```javascript
 let student = {
@@ -280,13 +281,16 @@ let complexOriginal = {
   },
 };
 
-// Метод JSON (простой, но с ограничениями)
-let deepCopy = JSON.parse(JSON.stringify(complexOriginal));
+// Для поддерживаемых структур данных используйте structuredClone.
+let deepCopy = structuredClone(complexOriginal);
+// Функции не клонируются: для них будет DataCloneError.
 
 deepCopy.contacts.phone = "+7(999)999-88-77";
 console.log(complexOriginal.contacts.phone); // "+7(999)111-22-33"
 console.log(deepCopy.contacts.phone); // "+7(999)999-88-77"
 ```
+
+JSON.parse(JSON.stringify(value)) не является универсальным клонированием: теряет undefined, функции и Symbol, превращает Date в строку и не поддерживает BigInt и циклические ссылки. structuredClone поддерживает вложенные данные и циклы, но не функции и DOM-узлы.
 
 ## 🎯 Практические примеры
 
@@ -344,7 +348,7 @@ let cart = {
 };
 
 console.log(`Общая сумма: ${cart.calculateSum()} руб`);
-// Общая сумма: 235 руб
+// Общая сумма: 265 руб
 ```
 
 ## 🚨 Частые ошибки новичков
@@ -438,7 +442,7 @@ mergeObjects({ a: 1, b: 2 }, { b: 3, c: 4 }); // { a: 1, b: 3, c: 4 }
 ```
 
 ### Задание 3: Выбрать ключи
-Напиши функцию `pick(obj, keys)`, которая возвращает новый объект только с указанными ключами.
+Напиши функцию `pick(obj, keys)`, которая возвращает новый объект только с указанными собственными ключами. Отсутствующие ключи пропускай; существующие со значением undefined сохраняй.
 ```javascript
 const user = { name: "Анна", age: 25, email: "a@b.com", city: "Москва" };
 pick(user, ["name", "email"]); // { name: "Анна", email: "a@b.com" }

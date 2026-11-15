@@ -4,8 +4,8 @@
   - [Типы данных](types-js.md)
   - [Операторы](operators-js.md)
   - [Условия](conditions-js.md)
-  - [Циклы](loops-js.md)
   - [Функции](function.md)
+  - [Циклы](loops-js.md)
 
 - **Работа с данными**
   - [Строки](strings-js.md)

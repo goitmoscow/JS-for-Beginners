@@ -192,7 +192,7 @@ while (error < 3) {
 
 ```javascript
 // Ищем случайное число больше 50
-let random;
+let random = 0;
 let attempts = 0;
 
 while (random <= 50 && attempts < 10) {
@@ -201,7 +201,11 @@ while (random <= 50 && attempts < 10) {
   console.log(`Попытка ${attempts}: ${random.toFixed(2)}`);
 }
 
-console.log(`Найдено число: ${random.toFixed(2)}`);
+if (random > 50) {
+  console.log(`Найдено число: ${random.toFixed(2)}`);
+} else {
+  console.log("За 10 попыток подходящее число не найдено");
+}
 ```
 
 ## ⏰ do...while - цикл с постусловием
@@ -424,11 +428,11 @@ let attempts = 0;
 let maxAttempts = 7;
 
 while (attempts < maxAttempts) {
-  guess = parseInt(
-    prompt(`Попытка ${attempts + 1}/${maxAttempts}. Введите число (1-100):`),
-  );
+  const input = prompt(`Попытка ${attempts + 1}/${maxAttempts}. Введите число (1-100):`);
+  if (input === null) break; // Отмена завершает игру
+  guess = Number(input);
 
-  if (isNaN(guess)) {
+  if (input.trim() === "" || !Number.isInteger(guess) || guess < 1 || guess > 100) {
     console.log("Введите корректное число!");
     continue;
   }
@@ -638,4 +642,4 @@ findDuplicates([1, 2, 3, 2, 4, 3, 5]); // [2, 3]
 
 ---
 
-[⬅️ Предыдущая тема: Условия](conditions-js.md) | [📚 Оглавление](README.md) | [Следующая тема: Функции ➡️](function.md)
+[⬅️ Предыдущая тема: Функции](function.md) | [📚 Оглавление](README.md) | [Следующая тема: Строки ➡️](strings-js.md)

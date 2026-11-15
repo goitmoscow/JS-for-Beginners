@@ -85,7 +85,7 @@ console.log("Секунды:", date.getSeconds()); // 45
 console.log("Миллисекунды:", date.getMilliseconds()); // 123
 
 // Общее время в миллисекундах
-console.log("Всего миллисекунд:", date.getTime()); // 1698256245123
+console.log("Всего миллисекунд:", date.getTime()); // Зависит от локального часового пояса конструктора
 ```
 
 ### 🎯 UTC методы (всемирное время)
@@ -171,7 +171,8 @@ console.log(
 );
 
 // Изменить всё сразу
-date.setFullYear(2025, 0, 1, 0, 0, 0); // 1 января 2025, 00:00:00
+date.setFullYear(2025, 0, 1); // Год, месяц, день
+date.setHours(0, 0, 0, 0); // Время задаётся отдельно
 ```
 
 ### 🎯 Последовательная установка значений
@@ -254,32 +255,25 @@ console.log("Отформатировано:", formatDate(now));
 ### 🎯 Относительное время
 
 ```javascript
-function relativeTime(date) {
-  const now = new Date();
-  const diff = now - date; // в миллисекундах
-  const seconds = Math.floor(diff / 1000);
-  const minutes = Math.floor(seconds / 60);
-  const hours = Math.floor(minutes / 60);
-  const days = Math.floor(hours / 24);
-
-  if (days > 0) return `${days} ${days === 1 ? "день" : "дня" || "дней"} назад`;
-  if (hours > 0)
-    return `${hours} ${hours === 1 ? "час" : "часа" || "часов"} назад`;
-  if (minutes > 0)
-    return `${minutes} ${minutes === 1 ? "минуту" : "минуты" || "минут"} назад`;
-  if (seconds > 0)
-    return `${seconds} ${seconds === 1 ? "секунду" : "секунды" || "секунд"} назад`;
-  return "только что";
+function relativeTime(date, now = new Date()) {
+  const difference = date - now;
+  if (!Number.isFinite(difference)) throw new RangeError("Некорректная дата");
+  if (Math.abs(difference) < 1000) return "только что";
+  const formatter = new Intl.RelativeTimeFormat("ru", { numeric: "always" });
+  const units = [["day", 86400000], ["hour", 3600000], ["minute", 60000], ["second", 1000]];
+  for (const [unit, size] of units) {
+    if (Math.abs(difference) >= size) {
+      return formatter.format(Math.trunc(difference / size), unit);
+    }
+  }
 }
 
-const minuteAgo = new Date(Date.now() - 60 * 1000);
-const hourAgo = new Date(Date.now() - 60 * 60 * 1000);
-const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-
-console.log("Минуту назад:", relativeTime(minuteAgo));
-console.log("Час назад:", relativeTime(hourAgo));
-console.log("День назад:", relativeTime(dayAgo));
+const reference = new Date("2024-03-10T12:00:00Z");
+console.log(relativeTime(new Date("2024-03-10T11:55:00Z"), reference)); // 5 минут назад
+console.log(relativeTime(new Date("2024-03-10T14:00:00Z"), reference)); // через 2 часа
 ```
+
+Date хранит момент времени. Строка YYYY-MM-DD разбирается как UTC, а числовой конструктор new Date(year, month, day) задаёт местную дату. Локальные сутки при смене часового пояса или переходе на летнее время не всегда равны 24 часам: различайте длительность и число календарных дней.
 
 ## 🧮 Математические операции с датами
 
@@ -309,7 +303,7 @@ console.log(date1.getTime() === date2.getTime()); // false
 function dateDiff(date1, date2) {
   const diff = Math.abs(date1 - date2); // абсолютная разница в миллисекундах
 
-  const milliseconds = diff;
+  const milliseconds = diff % 1000; // Остаток миллисекунд; diff хранит всю длительность
   const seconds = Math.floor(diff / 1000);
   const minutes = Math.floor(seconds / 60);
   const hours = Math.floor(minutes / 60);
@@ -486,7 +480,7 @@ function createCalendar(year, month, container) {
                 <div class="calendar-day-header">Чт</div>
                 <div class="calendar-day-header">Пт</div>
                 <div class="calendar-day-header">Сб</div>
-                ${createCalendarDays(daysInMonth, firstDayOfWeek)}
+                ${createCalendarDays(daysInMonth, firstDayOfWeek, year, month)}
             </div>
         </div>
     `;
@@ -494,7 +488,7 @@ function createCalendar(year, month, container) {
   container.innerHTML = calendarHtml;
 }
 
-function createCalendarDays(days, firstDayOfWeek) {
+function createCalendarDays(days, firstDayOfWeek, year, month) {
   let html = "";
 
   // Пустые ячейки перед первым днем
@@ -506,14 +500,14 @@ function createCalendarDays(days, firstDayOfWeek) {
   const today = new Date();
   for (let day = 1; day <= days; day++) {
     const currentDay = new Date(
-      today.getFullYear(),
-      today.getMonth(),
+      year,
+      month - 1,
       day,
     );
     const isToday =
-      today.getDate() === day &&
-      today.getMonth() === today.getMonth() &&
-      today.getFullYear() === today.getFullYear();
+      today.getDate() === currentDay.getDate() &&
+      today.getMonth() === currentDay.getMonth() &&
+      today.getFullYear() === currentDay.getFullYear();
 
     const cssClass = isToday ? "calendar-day today" : "calendar-day";
     html += `<div class="${cssClass}">${day}</div>`;
@@ -536,13 +530,15 @@ if (container) {
 class Countdown {
   constructor(targetDate, resultElement) {
     this.targetDate = new Date(targetDate);
+    if (!Number.isFinite(this.targetDate.getTime())) throw new RangeError("Некорректная дата отсчёта");
     this.element = resultElement;
     this.interval = null;
   }
 
   start() {
-    this.update();
+    this.stop(); // Повторный start не создаёт второй таймер
     this.interval = setInterval(() => this.update(), 1000);
+    this.update(); // Истёкший отсчёт сразу очистит установленный таймер
   }
 
   stop() {
@@ -578,7 +574,7 @@ class Countdown {
 // Использование
 const countdownElement = document.querySelector("#countdown");
 if (countdownElement) {
-  const countdown = new Countdown("2024-01-01T00:00:00", countdownElement);
+  const countdown = new Countdown(new Date(Date.now() + 60_000), countdownElement);
   countdown.start();
 }
 ```
@@ -588,7 +584,13 @@ if (countdownElement) {
 ```javascript
 function calculateAge(birthDate) {
   const today = new Date();
-  const birth = new Date(birthDate);
+  let birth;
+  if (typeof birthDate === "string") {
+    const [year, month, day] = birthDate.split("-").map(Number);
+    birth = new Date(year, month - 1, day);
+  } else {
+    birth = new Date(birthDate);
+  }
 
   let age = today.getFullYear() - birth.getFullYear();
   const monthDiff = today.getMonth() - birth.getMonth();
@@ -604,9 +606,11 @@ function calculateAge(birthDate) {
   return age;
 }
 
+// Для 29 февраля в невисокосный год здесь используется перенос Date на 1 марта.
 function daysToBirthday(birthDate) {
   const today = new Date();
-  const birthThisYear = new Date(
+  today.setHours(0, 0, 0, 0); // День рождения сегодня должен дать 0
+  let birthThisYear = new Date(
     today.getFullYear(),
     birthDate.getMonth(),
     birthDate.getDate(),
@@ -614,11 +618,11 @@ function daysToBirthday(birthDate) {
 
   // Если день рождения уже прошел в этом году
   if (birthThisYear < today) {
-    birthThisYear.setFullYear(today.getFullYear() + 1);
+    birthThisYear = new Date(today.getFullYear() + 1, birthDate.getMonth(), birthDate.getDate());
   }
 
-  const milliseconds = birthThisYear - today;
-  const days = Math.ceil(milliseconds / (1000 * 60 * 60 * 24));
+  const utcDay = (date) => Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+  const days = Math.round((utcDay(birthThisYear) - utcDay(today)) / 86400000);
 
   return days;
 }
@@ -626,7 +630,7 @@ function daysToBirthday(birthDate) {
 // Пример использования
 const birthDate = "1990-05-15";
 const age = calculateAge(birthDate);
-const daysToBirthdayValue = daysToBirthday(new Date(birthDate));
+const daysToBirthdayValue = daysToBirthday(new Date(1990, 4, 15));
 
 console.log(`Возраст: ${age} лет`);
 console.log(`Дней до дня рождения: ${daysToBirthdayValue}`);
@@ -703,9 +707,10 @@ newDate.setDate(newDate.getDate() + 1);
 console.log("Оригинал изменен:", original); // 26 октября!
 
 // ✅ ХОРОШО - создаем копию
-const copy = new Date(original);
+const unchanged = new Date(2023, 9, 25);
+const copy = new Date(unchanged);
 copy.setDate(copy.getDate() + 1);
-console.log("Оригинал цел:", original); // 25 октября
+console.log("Оригинал цел:", unchanged); // 25 октября
 console.log("Копия изменена:", copy); // 26 октября
 ```
 
@@ -718,10 +723,13 @@ const date = new Date("2023-10-25"); // без времени
 console.log("UTC день:", date.getUTCDate()); // 25
 console.log("Локальный день:", date.getDate()); // Может быть 24 или 25!
 
-// ✅ ХОРОШО - указываем время явно
-const safeDate = new Date("2023-10-25T12:00:00");
-console.log("UTC день:", safeDate.getUTCDate()); // 25
-console.log("Локальный день:", safeDate.getDate()); // 25
+// Для местной календарной даты используйте числовой конструктор:
+const localDate = new Date(2023, 9, 25);
+console.log("Местный день:", localDate.getDate()); // 25
+// Для момента времени указывайте Z (UTC) или смещение и выбирайте нужные getters:
+const instant = new Date("2023-10-25T12:00:00Z");
+console.log("UTC день:", instant.getUTCDate()); // 25
+console.log("Местный день:", instant.getDate()); // Может отличаться от UTC
 ```
 
 ## 📚 Шпаргалка быстрых операций
@@ -765,7 +773,10 @@ console.log("ДР:", birthDate.toLocaleDateString("ru-RU"));
 // 4. Возраст
 function getAge(birthDate) {
   const today = new Date();
-  return today.getFullYear() - birthDate.getFullYear();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) age--;
+  return age;
 }
 console.log("Возраст:", getAge(birthDate));
 
@@ -828,7 +839,7 @@ formatDateRu(new Date(2023, 0, 5, 9, 3)); // "05.01.2023 09:03"
 Напиши функцию `getAge(birthDateStr)`, которая принимает дату рождения в формате "ГГГГ-ММ-ДД" и возвращает полный возраст в годах (учитывая, прошёл ли уже день рождения в текущем году).
 
 ### Задание 3: Дни между датами
-Напиши функцию `daysBetween(dateStr1, dateStr2)`, которая принимает две строки дат и возвращает количество полных дней между ними (всегда положительное число).
+Напиши функцию `daysBetween(dateStr1, dateStr2)`, которая принимает две строки в формате ГГГГ-ММ-ДД и возвращает неотрицательное число полных суток между ними. Одинаковые даты дают 0.
 
 ### Задание 4: Рабочий или выходной?
 Напиши функцию `isWeekend(date)`, которая принимает объект `Date` и возвращает `true`, если это суббота или воскресенье.
@@ -840,6 +851,12 @@ formatDateRu(new Date(2023, 0, 5, 9, 3)); // "05.01.2023 09:03"
 **Запомни главное:** Даты в JavaScript мощные, но требуют внимания к деталям! Месяцы начинаются с 0, сравнивайте через getTime(), и используйте `toLocaleString()` для красивого форматирования. 📅
 
 Работа с датами - это как путешествие во времени, только в коде! ⏰🚀
+
+## Документация
+
+- [Date — MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date)
+- [Intl.RelativeTimeFormat — MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/RelativeTimeFormat)
+
 
 ---
 

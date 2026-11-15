@@ -9,11 +9,16 @@
 🎯 **Светофор** = показывает когда можно ехать
 
 ```javascript
-// JavaScript ждет сигналов и реагирует на них
-кнопка.addEventListener("click", () => {
+// JavaScript ждёт сигналов и реагирует на них
+const button = document.createElement("button");
+button.textContent = "Нажми меня";
+document.body.appendChild(button);
+button.addEventListener("click", () => {
   console.log("Кнопка нажата!");
 });
 ```
+
+Примеры выполняются в браузере на учебной HTML-странице. Сначала создайте элементы с указанными селекторами или измените селекторы под свою разметку. querySelector возвращает null, если элемент не найден. Самостоятельные блоки запускайте отдельно; примеры с ❌ намеренно показывают неверный приём.
 
 ## 🎯 addEventListener() - основной способ
 
@@ -130,7 +135,7 @@ const field = document.querySelector("input");
 // Нажатие клавиши
 field.addEventListener("keydown", (e) => {
   console.log(`Нажата клавиша: ${e.key}`);
-  console.log(`Код клавиши: ${e.keyCode}`); // устаревший
+  console.log(`Физическая клавиша: ${e.code}`);
 });
 
 // Отпускание клавиши
@@ -138,16 +143,17 @@ field.addEventListener("keyup", (e) => {
   console.log(`Отпущена клавиша: ${e.key}`);
 });
 
-// Ввод символа (с учетом раскладки)
-field.addEventListener("keypress", (e) => {
-  console.log(`Введен символ: ${e.key}`);
+// Изменение текста: учитывает вставку и способы ввода без клавиш.
+field.addEventListener("input", (e) => {
+  console.log(`Текущее значение: ${e.target.value}`);
 });
+// keypress устарел; для клавиш используйте keydown/keyup.
 ```
 
 ### 🎹 Специальные клавиши
 
 ```javascript
-документ.addEventListener("keydown", (e) => {
+document.addEventListener("keydown", (e) => {
   // Ctrl, Alt, Shift, Meta (Cmd на Mac)
   if (e.ctrlKey && e.key === "s") {
     e.preventDefault();
@@ -281,12 +287,14 @@ window.addEventListener("load", () => {
   console.log("Страница полностью загружена");
 });
 
+// Состояние приложения: меняйте при редактировании и сохранении.
+let hasUnsavedChanges = false;
 // Перед закрытием страницы
 window.addEventListener("beforeunload", (e) => {
   // Предупреждение при несохраненных данных
-  if (есть_несохраненные_данные) {
+  if (hasUnsavedChanges) {
     e.preventDefault();
-    e.returnValue = "Есть несохраненные данные. Уверены?";
+    e.returnValue = ""; // Совместимость; свой текст браузер не показывает
   }
 });
 ```
@@ -300,7 +308,7 @@ const button = document.querySelector(".btn");
 
 button.addEventListener("click", (e) => {
   console.log("Тип события:", e.type); // "click"
-  console.log("Целевой элемент:", e.target); // button
+  console.log("Целевой элемент:", e.target); // Элемент клика: может быть вложенным элементом кнопки
   console.log("Текущий элемент:", e.currentTarget); // button
   console.log("Время события:", e.timeStamp); // timestamp
 });
@@ -309,7 +317,7 @@ button.addEventListener("click", (e) => {
 ### 🖱️ Координаты мыши
 
 ```javascript
-документ.addEventListener("click", (e) => {
+document.addEventListener("click", (e) => {
   // Относительно окна браузера
   console.log("clientX:", e.clientX, "clientY:", e.clientY);
 
@@ -324,11 +332,10 @@ button.addEventListener("click", (e) => {
 ### 🎹 Информация о клавише
 
 ```javascript
-документ.addEventListener("keydown", (e) => {
+document.addEventListener("keydown", (e) => {
   console.log("Клавиша:", e.key); // "a", "Enter", "Escape"
   console.log("Код:", e.code); // "KeyA", "Enter", "Escape"
-  console.log("Клавиатурный код:", e.keyCode); // устарел
-  console.log("Which:", e.which); // устарел
+  // keyCode, which и keypress устарели. Используйте key/code и keydown/keyup.
 
   // Модификаторы
   console.log("Ctrl:", e.ctrlKey);
@@ -360,7 +367,7 @@ form.addEventListener("submit", (e) => {
 
 ### 🛑 Остановка всплытия событий
 
-```javascript
+```html
 <div class="outer">
     <div class="middle">
         <div class="inner">Кликни меня</div>
@@ -440,7 +447,7 @@ element.addEventListener("mousedown", (e) => {
   offsetX = e.clientX - rect.left;
   offsetY = e.clientY - rect.top;
 
-  element.style.position = "absolute";
+  element.style.position = "fixed"; // clientX/clientY относятся к окну
   element.style.zIndex = "1000";
 });
 
@@ -516,7 +523,9 @@ const interval = setInterval(() => {
 const search = document.querySelector("#search");
 const results = document.querySelector("#search-results");
 
+let searchVersion = 0;
 search.addEventListener("input", async (e) => {
+  const version = ++searchVersion;
   const query = e.target.value.trim();
 
   if (query.length < 2) {
@@ -531,6 +540,7 @@ search.addEventListener("input", async (e) => {
     // Симуляция API запроса
     await new Promise((resolve) => setTimeout(resolve, 300));
 
+    if (version !== searchVersion) return; // Устаревший ответ не обновляет экран
     // Пример данных
     const data = ["JavaScript", "Java", "Python", "TypeScript"];
 
@@ -554,6 +564,7 @@ search.addEventListener("input", async (e) => {
       });
     }
   } catch (error) {
+    if (version !== searchVersion) return;
     results.innerHTML = "<div class='error'>Ошибка поиска</div>";
   }
 });
@@ -561,6 +572,7 @@ search.addEventListener("input", async (e) => {
 // Закрывать результаты при клике вне
 document.addEventListener("click", (e) => {
   if (!e.target.closest("#search-container")) {
+    searchVersion++; // Не показывать старый ответ после закрытия
     results.innerHTML = "";
   }
 });
@@ -576,7 +588,7 @@ const time = document.querySelector("#time");
 const audio = new Audio("music.mp3");
 
 playBtn.addEventListener("click", () => {
-  audio.play();
+  audio.play().catch((error) => console.error("Воспроизведение не началось:", error.message));
 });
 
 pauseBtn.addEventListener("click", () => {
@@ -585,6 +597,7 @@ pauseBtn.addEventListener("click", () => {
 
 // Обновление прогресса
 audio.addEventListener("timeupdate", () => {
+  if (!Number.isFinite(audio.duration) || audio.duration <= 0) return;
   const progressPercent = (audio.currentTime / audio.duration) * 100;
   progress.value = progressPercent;
 
@@ -594,7 +607,9 @@ audio.addEventListener("timeupdate", () => {
 });
 
 progress.addEventListener("input", () => {
-  audio.currentTime = (progress.value / 100) * audio.duration;
+  if (Number.isFinite(audio.duration) && audio.duration > 0) {
+    audio.currentTime = (progress.value / 100) * audio.duration;
+  }
 });
 
 audio.addEventListener("ended", () => {
@@ -602,6 +617,7 @@ audio.addEventListener("ended", () => {
 });
 
 function formatTime(seconds) {
+  if (!Number.isFinite(seconds) || seconds < 0) return "--:--";
   const minutes = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
   return `${minutes}:${secs.toString().padStart(2, "0")}`;
@@ -647,14 +663,15 @@ form.addEventListener("submit", (e) => {
 });
 ```
 
-### ❌ Работа с событием после удаления элемента
+### 🔍 Удаление из DOM не уничтожает объект
 
 ```javascript
 const button = document.querySelector(".btn");
 
 button.addEventListener("click", () => {
   button.remove(); // Элемент удален
-  button.textContent = "Новый текст"; // ❌ Ошибка!
+  button.textContent = "Новый текст"; // Допустимо: объект существует, но уже не виден в документе
+  console.log(button.isConnected); // false
 });
 ```
 
@@ -739,7 +756,7 @@ container.appendChild(button);
 window.addEventListener("scroll", () => {
   const scroll = window.scrollY;
   const height = document.documentElement.scrollHeight - window.innerHeight;
-  const progress = (scroll / height) * 100;
+  const progress = height > 0 ? (scroll / height) * 100 : 0;
   console.log(`Прокручено: ${progress.toFixed(1)}%`);
 });
 ```

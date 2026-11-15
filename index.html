@@ -1,67 +1,101 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="utf-8">
   <title>JS for Beginners</title>
-  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
   <meta name="description" content="Шпаргалки по JavaScript для начинающих">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
-  <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/docsify-darklight-theme@latest/dist/style.min.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/docsify@5.1.0/dist/themes/core.min.css">
+  <link id="dark-theme" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/docsify@5.1.0/dist/themes/addons/core-dark.min.css" media="not all">
+  <style>
+    :root {
+      --theme-color: #42b983;
+      --font-family: "Source Sans Pro", "Helvetica Neue", Arial, sans-serif;
+      --font-family-mono: "Roboto Mono", Monaco, Consolas, monospace;
+      --content-max-width: 85ch;
+    }
+    .markdown-section { padding-top: 3.5rem; }
+    #theme-toggle {
+      position: fixed;
+      top: 12px;
+      right: 16px;
+      z-index: 30;
+      padding: 0.5em 0.85em;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      background: var(--color-bg);
+      color: var(--color-text);
+      font: inherit;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    #theme-toggle:focus-visible { outline: 2px solid var(--theme-color); outline-offset: 3px; }
+  </style>
+  <script>
+    (() => {
+      const storageKey = 'js-for-beginners:theme';
+      const sheet = document.getElementById('dark-theme');
+      const systemTheme = matchMedia('(prefers-color-scheme: dark)');
+      let savedTheme = null;
+      try { savedTheme = localStorage.getItem(storageKey); } catch {}
+      let theme = ['light', 'dark'].includes(savedTheme)
+        ? savedTheme : (systemTheme.matches ? 'dark' : 'light');
+      let followsSystem = !['light', 'dark'].includes(savedTheme);
+
+      function applyTheme() {
+        const dark = theme === 'dark';
+        sheet.media = dark ? 'all' : 'not all';
+        document.documentElement.dataset.theme = theme;
+        document.documentElement.style.colorScheme = theme;
+        const button = document.getElementById('theme-toggle');
+        if (button) {
+          button.textContent = dark ? 'Светлая тема' : 'Тёмная тема';
+          button.setAttribute('aria-pressed', String(dark));
+          button.setAttribute('aria-label', dark ? 'Включить светлую тему' : 'Включить тёмную тему');
+        }
+      }
+
+      applyTheme();
+      systemTheme.addEventListener('change', () => {
+        if (followsSystem) {
+          theme = systemTheme.matches ? 'dark' : 'light';
+          applyTheme();
+        }
+      });
+      document.addEventListener('DOMContentLoaded', () => {
+        applyTheme();
+        document.getElementById('theme-toggle').addEventListener('click', () => {
+          followsSystem = false;
+          theme = theme === 'dark' ? 'light' : 'dark';
+          applyTheme();
+          try { localStorage.setItem(storageKey, theme); } catch {}
+        });
+      });
+    })();
+  </script>
 </head>
-<body>
+<body class="loading sidebar-chevron-right">
+  <button id="theme-toggle" type="button" aria-label="Переключить тему" aria-pressed="false">Тёмная тема</button>
   <div id="app"></div>
   <script>
     window.$docsify = {
       name: 'JS for Beginners',
       nameLink: '#/',
-      repo: '',
       loadSidebar: true,
       subMaxLevel: 2,
+      auto2top: true,
       search: {
+        paths: 'auto',
         placeholder: 'Поиск...',
         noData: 'Ничего не найдено',
-        depth: 3
-      },
-      darklightTheme: {
-        defaultTheme: 'light',
-        siteFont: 'Source Sans Pro, Helvetica Neue, Arial, sans-serif',
-        codeFontFamily: 'Roboto Mono, Monaco, courier, monospace',
-        dark: {
-          accent: '#42b983',
-          toogleBackground: '#ffffff',
-          background: '#1e1e1e',
-          textColor: '#b4b4b4',
-          codeTextColor: '#ffffff',
-          codeBackgroundColor: '#0e0e0e',
-          borderColor: '#0d2538',
-          blockQuoteColor: '#858585',
-          highlightColor: '#d22778',
-          sidebarSublink: '#b4b4b4',
-          codeTypeColor: '#ffffff',
-          coverBackground: 'linear-gradient(to left bottom, hsl(118, 100%, 85%) 0%, hsl(181, 100%, 85%) 100%)',
-          toogleImage: 'url(https://cdn.jsdelivr.net/npm/docsify-darklight-theme@latest/icons/sun.svg)'
-        },
-        light: {
-          accent: '#42b983',
-          toogleBackground: '#091a28',
-          background: '#ffffff',
-          textColor: '#34495e',
-          codeTextColor: '#525252',
-          codeBackgroundColor: '#f8f8f8',
-          borderColor: 'rgba(0, 0, 0, 0.07)',
-          blockQuoteColor: '#858585',
-          highlightColor: '#d22778',
-          sidebarSublink: '#505d6b',
-          codeTypeColor: '#091a28',
-          coverBackground: 'linear-gradient(to left bottom, hsl(118, 100%, 85%) 0%, hsl(181, 100%, 85%) 100%)',
-          toogleImage: 'url(https://cdn.jsdelivr.net/npm/docsify-darklight-theme@latest/icons/moon.svg)'
-        }
+        depth: 3,
+        namespace: 'js-for-beginners'
       }
     };
   </script>
-  <script src="//cdn.jsdelivr.net/npm/docsify@4"></script>
-  <script src="//cdn.jsdelivr.net/npm/docsify-darklight-theme@latest/dist/index.min.js"></script>
-  <script src="//cdn.jsdelivr.net/npm/docsify@4/lib/plugins/search.min.js"></script>
-  <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-javascript.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docsify@5.1.0/dist/docsify.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docsify@5.1.0/dist/plugins/search.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.30.0/components/prism-typescript.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.30.0/components/prism-java.min.js"></script>
 </body>
 </html>

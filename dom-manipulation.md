@@ -13,6 +13,8 @@
 // Это JavaScript представление HTML-структуры страницы
 ```
 
+Эти примеры требуют браузера и HTML-элементов с указанными селекторами. Если нужного элемента нет, querySelector вернёт null. Для практического списка дел подготовьте `<div id="app"></div>`, для остальных примеров — контейнеры #gallery, #table-container и #form-container. Запускайте самостоятельные блоки отдельно.
+
 ## 🔍 Поиск элементов
 
 ### 🎯 document.querySelector() - самый мощный
@@ -55,7 +57,7 @@ allButtons.forEach((button) => {
 ### 🎯 Старые методы (все еще работают)
 
 ```javascript
-// Поиск по ID (быстрее querySelector)
+// Поиск по ID
 const element = document.getElementById("my-id");
 
 // Поиск по имени класса (возвращает HTMLCollection)
@@ -198,8 +200,8 @@ const container = document.querySelector(".container");
 container.innerHTML = "<strong>Жирный text</strong>";
 
 // Опасно для данных от пользователя:
-const userInput = "<script>alert('xss')</script>";
-container.innerHTML = userInput; // ❌ XSS атака!
+const userInput = "<b>Пользовательский текст</b>";
+container.innerHTML = userInput; // Ввод интерпретируется как разметка, не как текст
 ```
 
 ### 🎯 innerText - как textContent, но с учетом CSS
@@ -341,10 +343,13 @@ function createTodoList(container) {
 
     const element = document.createElement("li");
     element.className = "todo-item";
-    element.innerHTML = `
-            <span>${text}</span>
-            <button class="todo-delete">Удалить</button>
-        `;
+    const label = document.createElement("span");
+    label.textContent = text;
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "todo-delete";
+    remove.textContent = "Удалить";
+    element.append(label, remove);
 
     list.appendChild(element);
     input.value = "";
@@ -403,11 +408,14 @@ function createModal(src, title) {
   modal.innerHTML = `
         <div class="modal-content">
             <span class="modal-close">&times;</span>
-            <img src="${src}" alt="${title}">
-            <h3>${title}</h3>
+            <img>
+            <h3></h3>
         </div>
     `;
 
+  modal.querySelector("img").src = src;
+  modal.querySelector("img").alt = title;
+  modal.querySelector("h3").textContent = title;
   document.body.appendChild(modal);
 
   // Закрытие при клике на крестик
@@ -496,7 +504,7 @@ function createDynamicForm(fields, container) {
     group.className = "form-group";
 
     const label = document.createElement("label");
-    label.textContent = поле.label + ":";
+    label.textContent = поле.метка + ":";
     label.setAttribute("for", поле.имя);
     group.appendChild(label);
 
@@ -512,7 +520,7 @@ function createDynamicForm(fields, container) {
         поле.варианты.forEach((вариант) => {
           const option = document.createElement("option");
           option.value = вариант.значение;
-          option.textContent = вариант.text;
+          option.textContent = вариант.текст;
           input.appendChild(option);
         });
         break;
@@ -526,7 +534,8 @@ function createDynamicForm(fields, container) {
 
     input.id = поле.имя;
     input.name = поле.имя;
-    if (поле.значение) input.value = поле.значение;
+    if (поле.значение !== undefined) input.value = поле.значение;
+    input.required = Boolean(поле.обязательный);
 
     group.appendChild(input);
     form.appendChild(group);
@@ -617,9 +626,9 @@ elements.forEach((element) => {
 
 ```javascript
 const container = document.querySelector(".container");
-const userInput = "<script>alert('xss')</script>";
+const userInput = "<b>Пользовательский текст</b>";
 
-// ❌ ОПАСНО - XSS атака!
+// ❌ ОПАСНО: произвольная разметка может содержать обработчики событий
 container.innerHTML = userInput;
 
 // ✅ БЕЗОПАСНО - используйте textContent
@@ -686,7 +695,7 @@ document.body.prepend(button);
 // 4. Добавить действие
 button.addEventListener("click", () => {
   const randomColor =
-    "#" + Math.floor(Math.random() * 16777215).toString(16);
+    "#" + Math.floor(Math.random() * 16777216).toString(16).padStart(6, "0");
   document.body.style.backgroundColor = randomColor;
   button.textContent = `Цвет: ${randomColor}`;
 });
@@ -739,6 +748,12 @@ document.body.append(list);
 **Запомни главное:** DOM - это мост между HTML и JavaScript! Он позволяет динамически изменять веб-страницы и создавать интерактивные интерфейсы. 🌉
 
 Используй `querySelector()` для поиска, `classList` для классов, и всегда проверяйте существование элементов! 🎯
+
+## Документация
+
+- [textContent — MDN](https://developer.mozilla.org/en-US/docs/Web/API/Node/textContent)
+- [innerHTML — MDN](https://developer.mozilla.org/en-US/docs/Web/API/Element/innerHTML)
+
 
 ---
 

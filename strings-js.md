@@ -65,7 +65,7 @@ console.log(phrase.length); // 11 (пробел + восклицательный
 
 // Unicode символы
 let emoji = "😀";
-console.log(emoji.length); // 2 (некоторые эмодзи занимают 2 символа)
+console.log(emoji.length); // 2 кодовые единицы UTF-16, хотя видимый символ один
 ```
 
 ## 🔍 Доступ к символам
@@ -75,11 +75,11 @@ let text = "Программирование";
 
 // Способ 1: через индекс
 console.log(text[0]); // "П"
-console.log(text[5]); // "м"
+console.log(text[5]); // "а"
 
 // Способ 2: метод charAt()
 console.log(text.charAt(0)); // "П"
-console.log(text.charAt(5)); // "м"
+console.log(text.charAt(5)); // "а"
 
 // Разница: выход за пределы
 console.log(text[100]); // undefined
@@ -95,11 +95,11 @@ let text = "JavaScript - лучший язык программирования!
 
 // indexOf() - позиция первого вхождения
 let position = text.indexOf("JavaScript"); // 0
-let position2 = text.indexOf("лучший"); // 14
+let position2 = text.indexOf("лучший"); // 13
 let notFound = text.indexOf("Python"); // -1 (не найден)
 
 // lastIndexOf() - позиция последнего вхождения
-let lastPosition = text.lastIndexOf("а"); // 32
+let lastPosition = text.lastIndexOf("а"); // 37
 
 // includes() - проверка наличия
 let hasJavaScript = text.includes("JavaScript"); // true
@@ -107,10 +107,10 @@ let hasPython = text.includes("Python"); // false
 
 // startsWith() и endsWith() - проверка начала и конца
 let startsWithJava = text.startsWith("Java"); // true
-let endsWithNie = text.endsWith("ние!"); // true
+let endsWithNie = text.endsWith("ния!"); // true
 
 // search() - с регулярными выражениями
-let regPosition = text.search(/лучший/); // 14
+let regPosition = text.search(/лучший/); // 13
 ```
 
 ### ✂️ Вырезание подстрок
@@ -137,11 +137,11 @@ let text = "Красный розовый красный цветок";
 
 // replace() - замена только первого вхождения
 let changed1 = text.replace("красный", "синий");
-// "синий розовый красный цветок"
+// "Красный розовый синий цветок": поиск чувствителен к регистру
 
 // replace() с флагом g - замена всех вхождений
 let changed2 = text.replace(/красный/g, "синий");
-// "синий розовый синий цветок"
+// "Красный розовый синий цветок"; для обоих регистров нужен флаг gi
 
 // replace() с функцией
 let result = text.replace(/красный/g, (match, position) => {
@@ -266,7 +266,9 @@ console.log(spaces.length); // 3
 
 ## 🎯 Практические примеры
 
-### 📧 Валидация email
+### 📧 Учебная проверка строки email
+
+Проверки ниже демонстрируют методы строк и не подтверждают корректность или существование почтового адреса.
 
 ```javascript
 function validateEmail(email) {
@@ -295,6 +297,7 @@ console.log(validateEmail("user@example.")); // false
 function formatName(name) {
   // Убираем пробелы по краям
   name = name.trim();
+  if (name === "") return "";
 
   // Делаем первую букву заглавной
   return name[0].toUpperCase() + name.slice(1).toLowerCase();
@@ -304,7 +307,9 @@ console.log(formatName("  аННА  ")); // "Анна"
 console.log(formatName("пеТР")); // "Петр"
 ```
 
-### 🔍 Генератор паролей
+### 🔍 Генератор случайной учебной строки
+
+Math.random подходит для этого упражнения, но не для паролей или токенов. Для криптографической случайности предназначен crypto.getRandomValues.
 
 ```javascript
 function createPassword(length = 8) {
@@ -320,7 +325,7 @@ function createPassword(length = 8) {
   return password;
 }
 
-console.log(createPassword(12)); // "xK9@mN2!pQ7R"
+console.log(createPassword(12)); // Например, "xK9@mN2!pQ7R"; при каждом запуске результат может отличаться
 ```
 
 ### 🎮 Работа с путями файлов
@@ -346,12 +351,14 @@ console.log(`Имя: ${nameWithoutExt}, Расширение: ${extension}`);
 ```javascript
 function countWords(text) {
   // Убираем лишние пробелы и разделяем на слова
-  let words = text.trim().split(/\s+/);
+  const trimmed = text.trim();
+  if (trimmed === "") return 0;
+  let words = trimmed.split(/\s+/);
   return words.length;
 }
 
 let paragraph = "   Это    пример   текста с   разным   количеством   пробелов   ";
-console.log(`Слов в тексте: ${countWords(paragraph)}`); // 8
+console.log(`Слов в тексте: ${countWords(paragraph)}`); // 7
 ```
 
 ### 🔄 Цензура слов
@@ -359,19 +366,17 @@ console.log(`Слов в тексте: ${countWords(paragraph)}`); // 8
 ```javascript
 function censor(text, forbiddenWords) {
   let result = text;
-
-  forbiddenWords.forEach((word) => {
-    let pattern = new RegExp(word, "gi");
-    result = result.replace(pattern, "*".repeat(word.length));
-  });
-
+  for (const word of forbiddenWords) {
+    if (word === "") continue;
+    const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    result = result.replace(new RegExp(escaped, "giu"), (match) => "*".repeat(match.length));
+  }
   return result;
 }
-
-let text = "Этот ужасный код просто ужасен!";
-let badWords = ["ужасный", "ужасен"];
-console.log(censor(text, badWords));
-// "Этот ******** код просто *****!"
+console.log(censor("Этот ужасный код просто ужасен!", ["ужасный", "ужасен"]));
+// "Этот ******* код просто ******!"
+console.log(censor("c++ и c--", ["c++"])); // "*** и c--"
+// Это буквальная замена фрагментов, а не проверка границ слов.
 ```
 
 ## 🚨 Частые ошибки новичков
@@ -414,8 +419,10 @@ console.log("яблоко" > "апельсин"); // true (потому что '
 let emoji = "👨‍👩‍👧‍👦"; // Семья
 console.log(emoji.length); // 11 (сложный эмодзи состоит из нескольких символов)
 
-// Для работы с эмодзи лучше использовать [...строка]
-console.log([...emoji].length); // 1
+// Spread перебирает кодовые точки, а не видимые символы.
+console.log([...emoji].length); // 7
+const segmenter = new Intl.Segmenter("ru", { granularity: "grapheme" });
+console.log([...segmenter.segment(emoji)].length); // 1 графема
 ```
 
 ## 📚 Шпаргалка быстрых операций
@@ -488,7 +495,7 @@ isPalindrome("А роза упала на лапу Азора"); // true
 ### Задание 3: Обрезка строки
 Напиши функцию `truncate(str, maxLength)`, которая обрезает строку до `maxLength` символов и добавляет `"..."`, если строка длиннее.
 ```javascript
-truncate("Привет мир!", 7);  // "Привет..."
+truncate("Привет мир!", 7);  // "Привет ..."
 truncate("Привет", 10);     // "Привет"
 ```
 
@@ -503,6 +510,12 @@ truncate("Привет", 10);     // "Привет"
 
 Используй методы строк, и работа с текстом станет легкой и приятной! 📝
 
+## Документация
+
+- [String — MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String)
+- [Графемы и Intl.Segmenter — MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/Segmenter)
+
+
 ---
 
-[⬅️ Предыдущая тема: Функции](function.md) | [📚 Оглавление](README.md) | [Следующая тема: Массивы ➡️](arrays-js.md)
+[⬅️ Предыдущая тема: Циклы](loops-js.md) | [📚 Оглавление](README.md) | [Следующая тема: Массивы ➡️](arrays-js.md)

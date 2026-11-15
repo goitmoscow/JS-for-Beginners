@@ -73,7 +73,7 @@ try {
 
 ```javascript
 function checkAge(age) {
-  if (typeof age !== "number") {
+  if (!Number.isFinite(age)) {
     throw new TypeError("Возраст должен быть числом");
   }
 
@@ -100,29 +100,21 @@ try {
 ### 🎯 Класс Error и его наследники
 
 ```javascript
-// Базовый тип ошибки
 const error = new Error("Что-то пошло не так");
 console.log(error.name); // "Error"
 console.log(error.message); // "Что-то пошло не так"
 
-// Специфические типы ошибок
-const typeError = new TypeError("Неверный тип данных");
-const rangeError = new RangeError("Значение вне допустимого диапазона");
-const syntaxError = new SyntaxError("Синтаксическая ошибка");
-const referenceError = new ReferenceError("Объект не найден");
-
-// Кастомная ошибка
-class ПользовательскаяОшибка extends Error {
-  constructor(message, код) {
+class CustomError extends Error {
+  constructor(message, code) {
     super(message);
-    this.name = "ПользовательскаяОшибка";
-    this.код = код;
+    this.name = "CustomError";
+    this.code = code;
   }
 }
-
 const myError = new CustomError("Неверный логин", "AUTH_001");
 console.log(myError.message); // "Неверный логин"
 console.log(myError.code); // "AUTH_001"
+// Другие встроенные классы: TypeError, RangeError, SyntaxError, ReferenceError.
 ```
 
 ## 🌐 try...catch с асинхронным кодом
@@ -236,130 +228,63 @@ function processFileImproved(path) {
 ### 🎯 Валидация данных
 
 ```javascript
-class ВалидацияОшибка extends Error {
-  constructor(поле, сообщение) {
-    super(`${поле}: ${сообщение}`);
-    this.name = "ВалидацияОшибка";
-    this.поле = поле;
-    this.сообщение = сообщение;
+class ValidationError extends Error {
+  constructor(field, message) {
+    super(`${field}: ${message}`);
+    this.name = "ValidationError";
+    this.field = field;
   }
 }
-
 function validateUser(user) {
-  const errors = [];
-
-  if (!user.имя || user.имя.trim().length < 2) {
-    errors.push(new ValidationError("имя", "Минимум 2 символа"));
+  if (typeof user.name !== "string" || user.name.trim().length < 2) {
+    throw new ValidationError("name", "Минимум 2 символа");
   }
-
-  if (!user.email || !user.email.includes("@")) {
-    errors.push(new ValidationError("email", "Некорректный email"));
+  if (typeof user.email !== "string" || !user.email.includes("@")) {
+    throw new ValidationError("email", "Нужен символ @");
   }
-
-  if (!user.возраст || user.возраст < 18) {
-    errors.push(new ValidationError("возраст", "Минимум 18 лет"));
+  if (!Number.isFinite(user.age) || user.age < 18) {
+    throw new ValidationError("age", "Минимум 18 лет");
   }
-
-  if (errors.length > 0) {
-    throw new ValidationError(
-      "пользователь",
-      `Найдено ${errors.length} ошибок`,
-    );
-  }
-
   return true;
 }
-
 try {
-  const user = {
-    имя: "А",
-    email: "неверный-email",
-    возраст: 16,
-  };
-
-  валидировать_пользователя(user);
-  console.log("Пользователь валиден");
-} catch (ошибка) {
-  if (ошибка instanceof ВалидацияОшибка) {
-    console.error("Ошибка валидации:", ошибка.message);
-  } else {
-    console.error("Неожиданная ошибка:", ошибка.message);
-  }
+  validateUser({ name: "А", email: "неверный-email", age: 16 });
+} catch (error) {
+  if (error instanceof ValidationError) console.error(error.message);
+  else throw error;
 }
+// Проверка email здесь иллюстрирует ветвление, а не полную проверку адреса.
 ```
 
 ### 🎯 Обработка ошибок API
 
 ```javascript
 class APIError extends Error {
-  constructor(status, message, data = null) {
+  constructor(status, message) {
     super(message);
     this.name = "APIError";
     this.status = status;
-    this.data = data;
   }
 }
-
 async function apiRequest(url, options = {}) {
+  const headers = new Headers(options.headers);
+  if (!headers.has("Content-Type")) headers.set("Content-Type", "application/json");
+  let response;
   try {
-    const response = await fetch(url, {
-      headers: {
-        "Content-Type": "application/json",
-        ...options.headers,
-      },
-      ...options,
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new APIError(
-        response.status,
-        data.message || `HTTP ${response.status}`,
-        data,
-      );
-    }
-
-    return data;
+    response = await fetch(url, { ...options, headers });
   } catch (error) {
-    if (error instanceof APIError) {
-      // Уже наша кастомная ошибка
-      throw error;
-    } else if (error.name === "TypeError") {
-      // Ошибка сети
-      throw new APIError(0, "Ошибка сети или недоступен сервер");
-    } else {
-      // Другие ошибки
-      throw new APIError(500, "Внутренняя ошибка сервера");
-    }
+    throw new APIError(0, `Сетевой запрос не выполнен: ${error.message}`);
   }
+  if (!response.ok) throw new APIError(response.status, `HTTP ${response.status}`);
+  if (response.status === 204) return null; // Нет тела ответа
+  return response.json(); // Ошибка JSON остаётся ошибкой разбора, а не HTTP 500
 }
-
-// Использование
 async function getUser(id) {
   try {
-    const user = await apiRequest(`/api/users/${id}`);
-    console.log("Пользователь получен:", user);
-    return user;
+    return await apiRequest(`https://jsonplaceholder.typicode.com/users/${id}`);
   } catch (error) {
-    if (error instanceof APIError) {
-      switch (error.status) {
-        case 404:
-          console.error("Пользователь не найден");
-          break;
-        case 401:
-          console.error("Необходима авторизация");
-          break;
-        case 0:
-          console.error("Проблемы с подключением");
-          break;
-        default:
-          console.error("Ошибка API:", error.message);
-      }
-    } else {
-      console.error("Неожиданная ошибка:", error.message);
-    }
-
+    if (error instanceof APIError) console.error(error.status, error.message);
+    else console.error("Не удалось прочитать JSON:", error.message);
     return null;
   }
 }
@@ -368,69 +293,38 @@ async function getUser(id) {
 ### 🎯 Graceful degradation (плавное ухудшение)
 
 ```javascript
-class УстойчивыйЗагрузчик {
-  constructor(основной_url, резервные_url = []) {
-    this.основной_url = основной_url;
-    this.резервные_url = резервные_url;
-    this.время_ожидания = 5000;
+class ResilientLoader {
+  constructor(primaryUrl, backupUrls = []) {
+    this.primaryUrl = primaryUrl;
+    this.backupUrls = backupUrls;
+    this.timeout = 5000;
   }
-
-  async загрузить() {
-    // Пытаемся основной источник
+  async loadWithTimeout(url) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), this.timeout);
     try {
-      return await this.загрузить_с_таймаутом(this.основной_url);
-    } catch (ошибка) {
-      console.warn(
-        "Основной источник недоступен, пробуем резервные:",
-        ошибка.message,
-      );
-
-      // Пробуем резервные источники
-      for (const url of this.резервные_url) {
-        try {
-          return await this.загрузить_с_таймаутом(url);
-        } catch (резервная_ошибка) {
-          console.warn(
-            `Резервный источник ${url} недоступен:`,
-            резервная_ошибка.message,
-          );
-        }
-      }
-
-      // Если все источники недоступны
-      console.error("Все источники недоступны, используем кэшированные data");
-      return this.получить_кэшированные_данные();
+      const response = await fetch(url, { signal: controller.signal });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return await response.json();
+    } finally {
+      clearTimeout(timer);
     }
   }
-
-  загрузить_с_таймаутом(url) {
-    return Promise.race([
-      fetch(url).then((r) => r.json()),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Timeout")), this.время_ожидания),
-      ),
-    ]);
-  }
-
-  получить_кэшированные_данные() {
-    // Возвращаем последние известные data или значения по умолчанию
-    return { статус: "offline", data: null };
+  async load() {
+    for (const url of [this.primaryUrl, ...this.backupUrls]) {
+      try {
+        return await this.loadWithTimeout(url);
+      } catch (error) {
+        console.warn(`Источник ${url} недоступен:`, error.message);
+      }
+    }
+    return { status: "offline", data: null };
   }
 }
-
-// Использование
-const loader = new ResilientLoader("https://api.example.com/data", [
-  "https://backup1.example.com/data",
-  "https://backup2.example.com/data",
-]);
-
-loader.load().then((data) => {
-  if (data) {
-    console.log("Данные успешно загружены:", data);
-  } else {
-    console.log("Работаем в офлайн режиме");
-  }
-});
+// Укажите собственные адреса источников. Сеть отменяется через AbortController;
+// Promise.race сам по себе только выбирает первый результат и не отменяет fetch.
+const loader = new ResilientLoader("https://jsonplaceholder.typicode.com/users/1");
+loader.load().then(console.log).catch(console.error);
 ```
 
 ## 🔀 error object - структура ошибки
@@ -443,7 +337,7 @@ try {
   JSON.parse("{некорректный json}");
 } catch (ошибка) {
   console.log("Имя ошибки:", ошибка.name); // "SyntaxError"
-  console.log("Сообщение:", ошибка.message); // "Unexpected token n in JSON"
+  console.log("Сообщение:", ошибка.message); // Текст сообщения зависит от движка и версии
   console.log("Стек вызовов:", ошибка.stack); // Полный стек вызовов
 
   // Полный объект ошибки
@@ -454,39 +348,20 @@ try {
 ### 🎯 Собственные свойства ошибок
 
 ```javascript
-class БизнесОшибка extends Error {
-  constructor(код, сообщение, детали = {}) {
-    super(сообщение);
-    this.name = "БизнесОшибка";
-    this.код = код;
-    this.детали = детали;
-    this.время = new Date().toISOString();
+class BusinessError extends Error {
+  constructor(code, message, details = {}) {
+    super(message);
+    this.name = "BusinessError";
+    this.code = code;
+    this.details = details;
+    this.time = new Date().toISOString();
   }
-
   toObject() {
-    return {
-      ошибка: this.name,
-      код: this.код,
-      сообщение: this.message,
-      детали: this.детали,
-      время: this.время,
-    };
+    return { name: this.name, code: this.code, message: this.message, details: this.details, time: this.time };
   }
 }
-
-const businessError = new BusinessError("PAYMENT_FAILED", "Платеж не прошел", {
-  карта: "****1234",
-  сумма: 1000,
-});
-
-console.log(businessError.toObject());
-// {
-//   ошибка: "БизнесОшибка",
-//   код: "PAYMENT_FAILED",
-//   сообщение: "Платеж не прошел",
-//   детали: { карта: "****1234", сумма: 1000 },
-//   время: "2023-10-25T15:30:45.123Z"
-// }
+const businessError = new BusinessError("PAYMENT_FAILED", "Платёж не прошёл", { amount: 1000 });
+console.log(businessError.toObject()); // Время зависит от момента запуска
 ```
 
 ## 🎯 Глобальная обработка ошибок
@@ -509,15 +384,15 @@ window.onerror = function (
     ошибка: ошибка?.stack,
   });
 
-  // Отправляем ошибку на сервер для логирования
-  отправить_ошибку_на_сервер({
+  // Прикладное журналирование: в этом примере только выводим данные.
+  console.error({
     тип: "синхронная",
     сообщение,
     источник,
     номер_строки,
     номер_колонки,
     стек: ошибка?.stack,
-    пользователь: получить_данные_пользователя(),
+    пользователь: null, // Приложение может добавить разрешённый контекст
     время: new Date().toISOString(),
   });
 
@@ -532,10 +407,10 @@ window.onerror = function (
 window.onunhandledrejection = function (событие) {
   console.error("Необработанный промис:", событие.reason);
 
-  отправить_ошибку_на_сервер({
+  console.error({
     тип: "промис",
     причина: событие.reason,
-    пользователь: получить_данные_пользователя(),
+    пользователь: null,
     время: new Date().toISOString(),
   });
 
@@ -616,13 +491,13 @@ window.менеджер_ошибок = new МенеджерОшибок();
 
 ```javascript
 // ❌ ПЛОХО - ошибка не обработана
-async функция loadData() {
+async function loadData() {
     const data = await fetch('/api/data'); // Может вызвать ошибку
     return data.json(); // Тоже может вызвать ошибку
 }
 
 // ✅ ХОРОШО - обрабатываем ошибки
-async функция loadData() {
+async function loadData() {
     try {
         const response = await fetch('/api/data');
         const data = await response.json();
@@ -661,45 +536,34 @@ try {
 ### ❌ Игнорирование finally
 
 ```javascript
-let resource;
-
-try {
-  resource = createResource();
-  workWithResource(resource);
-} catch (error) {
-  console.error("Ошибка:", error);
-} finally {
-  // ❌ ЗАБЫЛИ очистить ресурс!
-}
-
-// ✅ ХОРОШО - всегда очищаем ресурсы
-try {
-  ресурс = создать_ресурс();
-  работать_с_ресурсом(ресурс);
-} catch (ошибка) {
-  console.error("Ошибка:", ошибка);
-} finally {
-  if (ресурс) {
-    очистить_ресурс(ресурс);
-    console.log("Ресурс очищен");
+function withResource(work) {
+  const resource = { closed: false };
+  try {
+    return work(resource);
+  } catch (error) {
+    console.error("Ошибка:", error.message);
+    return null;
+  } finally {
+    resource.closed = true; // Очистка выполняется и при return, и при throw
+    console.log("Ресурс очищен:", resource.closed);
   }
 }
+withResource(() => { throw new Error("Не удалось выполнить операцию"); });
 ```
 
 ### ❌ Неправильное использование throw
 
 ```javascript
-function checkValue(value) {
-  // ❌ ПЛОХО - бросаем строку вместо Error
-  if (!value) throw "Значение не может быть пустым";
-
-  // ❌ ПЛОХО - бросаем число
+// Неудачный вариант: выброшенный примитив не имеет обычных свойств Error.
+function checkValueBad(value) {
+  if (!value) throw "Пустое значение";
   if (typeof value !== "string") throw 1;
-
-  // ✅ ХОРОШО - используем Error или наследников
-  if (!value) throw new Error("Значение не может быть пустым");
-  if (typeof value !== "string")
-    throw new TypeError("Значение должно быть строкой");
+}
+// Исправленный вариант — отдельная функция, её проверки достижимы.
+function checkValue(value) {
+  if (typeof value !== "string") throw new TypeError("Значение должно быть строкой");
+  if (value === "") throw new Error("Значение не может быть пустым");
+  return value;
 }
 ```
 
@@ -782,11 +646,11 @@ async function asyncError() {
 asyncError();
 
 // 6. Кастомная ошибка
-class ВалидацияОшибка extends Error {
-  constructor(поле, сообщение) {
-    super(`${поле}: ${сообщение}`);
-    this.name = "ВалидацияОшибка";
-    this.поле = поле;
+class ValidationError extends Error {
+  constructor(field, message) {
+    super(`${field}: ${message}`);
+    this.name = "ValidationError";
+    this.field = field;
   }
 }
 
@@ -811,7 +675,7 @@ window.onerror = function (msg, source, line, col, error) {
   console.log("Глобальная ошибка поймана:", { msg, source, line, col });
   // Восстанавливаем старый обработчик
   setTimeout(() => {
-    window.onerror = старый_handler;
+    window.onerror = oldHandler;
   }, 1000);
   return false;
 };

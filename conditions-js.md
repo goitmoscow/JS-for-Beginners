@@ -264,7 +264,7 @@ function validatePassword(password) {
     return "Слишком короткий пароль";
   }
 
-  if (!/[A-Z]/.test(password)) {
+  if (!/\p{Lu}/u.test(password)) {
     return "Нужна заглавная буква";
   }
 
@@ -272,13 +272,13 @@ function validatePassword(password) {
     return "Нужна цифра";
   }
 
-  return "Пароль надежный!";
+  return "Пароль соответствует учебным условиям";
 }
 
 console.log(validatePassword("123")); // "Слишком короткий пароль"
 console.log(validatePassword("пароль")); // "Нужна заглавная буква"
 console.log(validatePassword("Пароль")); // "Нужна цифра"
-console.log(validatePassword("Пароль123")); // "Пароль надежный!"
+console.log(validatePassword("Пароль123")); // "Пароль соответствует учебным условиям"
 ```
 
 ### 🛒 Калькулятор скидок
@@ -329,6 +329,7 @@ console.log(order);
 
 ```javascript
 function greetingByTime(hours) {
+  if (!Number.isInteger(hours) || hours < 0 || hours > 23) return "Некорректное время";
   let timeOfDay;
 
   if (hours >= 6 && hours < 12) {
@@ -366,7 +367,7 @@ console.log(greetingByTime(15)); // "Добрый день! Сейчас 15 ча
 ```javascript
 function calculator(a, operator, b) {
   // Проверка чисел
-  if (typeof a !== "number" || typeof b !== "number") {
+  if (!Number.isFinite(a) || !Number.isFinite(b)) {
     return "Оба аргумента должны быть числами";
   }
 
@@ -524,12 +525,12 @@ if (isAccessAllowed) {
 ## 📚 Шпаргалка выбора конструкции
 
 | Ситуация                   | Рекомендация       | Пример                                       |
-| -------------------------- | ------------------ | -------------------------------------------- | --- | ---------- | --- | --------------- |
+| -------------------------- | ------------------ | -------------------------------------------- |
 | 2 варианта выбора          | `if-else`          | `if (x > 0) { ... } else { ... }`            |
 | Больше 2 вариантов         | `if-else if-else`  | `if (x < 0) { ... } else if (x > 0) { ... }` |
 | Сравнение одной переменной | `switch`           | `switch (день) { case "пн": ... }`           |
 | Короткое присваивание      | Тернарный оператор | `let x = y > 0 ? "плюс" : "минус"`           |
-| Значение по умолчанию      | `                  |                                              | `   | `let x = y |     | "по умолчанию"` |
+| Значение по умолчанию | `\|\|` / `??` | `const x = y ?? "по умолчанию"` |
 | Условное действие          | `&&`               | `x && doSomething()`                      |
 
 ## 📚 Шпаргалка операторов сравнения
@@ -636,4 +637,4 @@ if (temperature > 30) {
 
 ---
 
-[⬅️ Предыдущая тема: Операторы](operators-js.md) | [📚 Оглавление](README.md) | [Следующая тема: Циклы ➡️](loops-js.md)
+[⬅️ Предыдущая тема: Операторы](operators-js.md) | [📚 Оглавление](README.md) | [Следующая тема: Функции ➡️](function.md)
