@@ -21,7 +21,9 @@ setTimeout(() => console.log("2"), 1000); // через 1 секунду
 console.log("3"); // 1, 3, 2
 ```
 
-## ⏳ Колбэки (Callbacks) - старый способ
+## ⏳ Колбэки (Callbacks)
+
+Callback — функция, переданная другому коду для вызова. Она бывает синхронной, как в map, или вызывается позже, как в setTimeout. Промисы и async/await помогают организовать асинхронные операции, но не заменяют все колбэки.
 
 ### 🎯 Базовый колбэк
 
@@ -203,11 +205,12 @@ Promise.race([fast, slow]).then((winner) => {
 ### 🎯 Базовый синтаксис
 
 ```javascript
-async function() {
-    // await можно использовать только внутри async
-    const result = await promise;
-    return result;
+async function getResult() {
+  const result = await Promise.resolve("Готово");
+  return result;
 }
+getResult().then(console.log);
+// await допустим внутри async-функций, а также на верхнем уровне ES-модулей.
 
 // async функции всегда возвращают промис
 ```
@@ -215,56 +218,49 @@ async function() {
 ### 🎯 Пример с async/await
 
 ```javascript
-async function loadUser(id) {
-  try {
-    console.log(`Загружаем пользователя ${id}...`);
-
-    // Ждем результата промиса
-    const user = await loadUser(id);
-    console.log("Пользователь загружен:", user);
-
-    // Ждем загрузки профиля
-    const profile = await loadProfile(user.id);
-    console.log("Профиль загружен:", profile);
-
-    return { user, profile };
-  } catch (error) {
-    console.error("Ошибка:", error.message);
-    throw error; // Пробрасываем ошибку дальше
-  }
+async function fetchJson(url) {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  return response.json();
 }
 
-// Вызов
-loadUser(1)
-  .then((data) => console.log("Итоговые данные:", data))
-  .catch((error) => console.error("Финальная ошибка:", error));
+async function loadUserWithPosts(id) {
+  const user = await fetchJson(`https://jsonplaceholder.typicode.com/users/${id}`);
+  const posts = await fetchJson(`https://jsonplaceholder.typicode.com/posts?userId=${id}`);
+  return { user, posts };
+}
+
+loadUserWithPosts(1)
+  .then((data) => console.log("Данные:", data))
+  .catch((error) => console.error("Ошибка:", error.message));
 ```
 
 ### 🎯 Parallel async/await
 
 ```javascript
-async function loadData() {
-  try {
-    // ❌ ПОСЛЕДОВАТЕЛЬНО (медленно)
-    const user = await loadUser(1);
-    const friends = await loadFriends(1);
-    const photos = await loadPhotos(1);
-
-    // ✅ ПАРАЛЛЕЛЬНО (быстро)
-    const [user, friends, photos] = await Promise.all([
-      loadUser(1),
-      loadFriends(1),
-      loadPhotos(1),
-    ]);
-
-    return { user, friends, photos };
-  } catch (error) {
-    console.error("Ошибка:", error);
-  }
+// В этом примере fetchJson — функция из предыдущего блока.
+async function loadSequential(id) {
+  const user = await fetchJson(`https://jsonplaceholder.typicode.com/users/${id}`);
+  const posts = await fetchJson(`https://jsonplaceholder.typicode.com/posts?userId=${id}`);
+  return { user, posts };
 }
+
+async function loadParallel(id) {
+  const [user, posts] = await Promise.all([
+    fetchJson(`https://jsonplaceholder.typicode.com/users/${id}`),
+    fetchJson(`https://jsonplaceholder.typicode.com/posts?userId=${id}`),
+  ]);
+  return { user, posts };
+}
+// Параллельный вариант подходит для независимых запросов.
+loadParallel(1).then(console.log).catch(console.error);
 ```
 
+Promise.all сохраняет порядок входных промисов, но при первой ошибке отклоняется; уже начатые запросы не отменяются автоматически. Promise.race тоже не отменяет оставшиеся операции.
+
 ## 🌐 Fetch API - работа с сетью
+
+fetch не отклоняет промис только из-за статуса HTTP 404 или 500. Проверяйте response.ok до чтения успешного результата. Примеры с /api/... предполагают ваш сервер; JSONPlaceholder — публичный учебный сервис, изменения в нём имитируются и не сохраняются.
 
 ### 🎯 Базовый GET запрос
 
@@ -302,6 +298,7 @@ async function createUser(data) {
       body: JSON.stringify(data),
     });
 
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const created = await response.json();
     console.log("Создан пользователь:", created);
     return created;
@@ -334,6 +331,7 @@ async function updateUser(id, data) {
       },
     );
 
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const updated = await response.json();
     console.log("Обновлен пользователь:", updated);
     return updated;
@@ -455,6 +453,7 @@ class Cart {
       const response = await fetch(
         `https://jsonplaceholder.typicode.com/posts/${id}`,
       );
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const product = await response.json();
 
       product.quantity = 1;
@@ -665,24 +664,17 @@ async function getData() {
 
 ```javascript
 async function loadData() {
-    // ❌ ПЛОХО - try/catch только для первого await
-    try {
-        const user = await fetch('/api/user');
-        const profile = await fetch('/api/profile'); // Ошибка здесь не обработается
-        const friends = await fetch('/api/friends'); // И здесь
-    } catch (error) {
-        console.error("Ошибка:", error);
-    }
-
-    // ✅ ХОРОШО - try/catch для всех асинхронных операций
-    try {
-        const user = await fetch('/api/user');
-        const profile = await fetch('/api/profile');
-        const friends = await fetch('/api/friends');
-    } catch (error) {
-        console.error("Ошибка:", error);
-    }
+  try {
+    // Все операции, которые здесь await-ятся, попадают в этот catch.
+    const response = await fetch("https://jsonplaceholder.typicode.com/users/1");
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return await response.json(); // await нужен для обработки ошибки чтения здесь
+  } catch (error) {
+    console.error("Ошибка:", error.message);
+    return null;
+  }
 }
+// Без await или return промис нужно обрабатывать отдельно через .catch().
 ```
 
 ### ❌ Смешивание колбэков и промисов
@@ -834,6 +826,12 @@ loadAllUsers([1, 2, 3]).then(users => console.log(users));
 **Запомни главное:** Асинхронность позволяет JavaScript не блокировать интерфейс во время долгих операций! Используй `async/await` для читаемости и `try/catch` для обработки ошибок. ⏳
 
 Асинхронный код - это как многозадачность в реальной жизни: можно пить кофе, пока пицца готовится! 🍕☕
+
+## Документация
+
+- [async function — MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/async_function)
+- [Использование Fetch — MDN](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch)
+
 
 ---
 

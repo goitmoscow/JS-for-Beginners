@@ -100,6 +100,8 @@ typeof null         // "object"    ← историческая ошибка JS!
 typeof [1, 2, 3]   // "object"    ← массив — это объект
 typeof {}           // "object"
 typeof function(){} // "function"
+typeof 42n          // "bigint"
+typeof Symbol("id") // "symbol"
 ```
 
 ### Задание 2: Предскажи преобразование
@@ -446,7 +448,7 @@ function countVowels(str) {
 }
 
 console.log(countVowels("Привет мир")); // 3 (и, е, и)
-console.log(countVowels("JavaScript")); // 3 (a, a, i) — английские не считаем!
+console.log(countVowels("JavaScript")); // 0: функция считает только русские гласные
 ```
 
 > **Примечание:** Если нужно считать и английские гласные, добавь их в строку `vowels`.
@@ -506,6 +508,7 @@ console.log(sorted);
 
 ```javascript
 function chunk(array, size) {
+  if (!Number.isInteger(size) || size <= 0) throw new RangeError("size должен быть положительным целым");
   const result = [];
   for (let i = 0; i < array.length; i += size) {
     result.push(array.slice(i, i + size));
@@ -579,7 +582,7 @@ console.log(mergeObjects({ a: 1, b: 2 }, { b: 3, c: 4 }));
 function pick(obj, keys) {
   const result = {};
   for (const key of keys) {
-    if (key in obj) {
+    if (Object.hasOwn(obj, key)) {
       result[key] = obj[key];
     }
   }
@@ -614,8 +617,8 @@ function createCounter(start) {
   let value = start;
 
   return {
-    increment() { value++; },
-    decrement() { value--; },
+    increment() { value++; return value; },
+    decrement() { value--; return value; },
     getValue() { return value; }
   };
 }
@@ -637,7 +640,7 @@ function once(fn) {
   return function (...args) {
     if (!called) {
       called = true;
-      result = fn(...args);
+      result = fn.apply(this, args);
     }
     return result;
   };
@@ -704,7 +707,10 @@ fetchUserInfo(1).then(user => console.log(user));
 async function loadAllUsers(ids) {
   const promises = ids.map(id =>
     fetch(`https://jsonplaceholder.typicode.com/users/${id}`)
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
       .then(user => ({ name: user.name, email: user.email }))
   );
 
@@ -753,6 +759,7 @@ document.body.appendChild(card);
 ```javascript
 function addItem(listId, text) {
   const ul = document.getElementById(listId);
+  if (!ul) throw new Error(`Список ${listId} не найден`);
 
   const li = document.createElement("li");
   li.textContent = text;
@@ -864,7 +871,8 @@ console.log(formatDateRu(new Date(2023, 0, 5, 9, 3))); // "05.01.2023 09:03"
 
 ```javascript
 function getAge(birthDateStr) {
-  const birth = new Date(birthDateStr);
+  const [year, month, day] = birthDateStr.split("-").map(Number);
+  const birth = new Date(year, month - 1, day); // Местная календарная дата
   const today = new Date();
 
   let age = today.getFullYear() - birth.getFullYear();
@@ -903,8 +911,8 @@ function isWeekend(date) {
   return day === 0 || day === 6; // 0 = воскресенье, 6 = суббота
 }
 
-console.log(isWeekend(new Date("2024-01-06"))); // true (суббота)
-console.log(isWeekend(new Date("2024-01-08"))); // false (понедельник)
+console.log(isWeekend(new Date(2024, 0, 6))); // true (суббота)
+console.log(isWeekend(new Date(2024, 0, 8))); // false (понедельник)
 ```
 
 ---
@@ -931,22 +939,22 @@ try {
 
 ```javascript
 class ValidationError extends Error {
-  constructor(message, field) {
-    super(message);
+  constructor(field, message) {
+    super(`${field}: ${message}`);
     this.name = "ValidationError";
     this.field = field;
   }
 }
 
 function validateAge(age) {
-  if (typeof age !== "number" || isNaN(age)) {
-    throw new ValidationError("должен быть числом", "age");
+  if (!Number.isFinite(age)) {
+    throw new ValidationError("age", "должен быть числом");
   }
   if (age < 0) {
-    throw new ValidationError("не может быть отрицательным", "age");
+    throw new ValidationError("age", "не может быть отрицательным");
   }
   if (age > 150) {
-    throw new ValidationError("слишком большое значение", "age");
+    throw new ValidationError("age", "слишком большое значение");
   }
   return true;
 }
@@ -956,14 +964,14 @@ try {
   validateAge("двадцать");
 } catch (e) {
   if (e instanceof ValidationError) {
-    console.log(`${e.field}: ${e.message}`); // "age: должен быть числом"
+    console.log(e.message); // "age: должен быть числом"
   }
 }
 
 try {
   validateAge(-5);
 } catch (e) {
-  console.log(`${e.field}: ${e.message}`); // "age: не может быть отрицательным"
+  console.log(e.message); // "age: не может быть отрицательным"
 }
 ```
 
@@ -993,7 +1001,7 @@ console.log(data); // { userId: 1, id: 1, title: "...", body: "..." } или nul
 ### Задание 1: Валидация телефона
 
 ```javascript
-const phoneRegex = /^(\+7|8)\(?\d{3}\)?-?\d{3}-?\d{2}-?\d{2}$/;
+const phoneRegex = /^(?:\+7|8)(?:\d{10}|\(\d{3}\)\d{3}-\d{2}-\d{2})$/;
 
 console.log(phoneRegex.test("+79991234567"));       // true
 console.log(phoneRegex.test("89991234567"));        // true
@@ -1095,6 +1103,8 @@ async function getPostWithComments(postId) {
     fetch(`https://jsonplaceholder.typicode.com/posts/${postId}/comments`)
   ]);
 
+  if (!postRes.ok) throw new Error(`HTTP ${postRes.status}`);
+  if (!commentsRes.ok) throw new Error(`HTTP ${commentsRes.status}`);
   const post = await postRes.json();
   const comments = await commentsRes.json();
 

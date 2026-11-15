@@ -50,11 +50,11 @@ const data = {
 };
 
 const prettyJson = JSON.stringify(data, null, 2);
-console.log(красивый_json);
+console.log(prettyJson);
 
 /*
 {
-  "пользователи": [
+  "users": [
     {
       "name": "Анна",
       "возраст": 25
@@ -89,8 +89,7 @@ const jsonWithoutPassword = JSON.stringify(
     // Исключаем пароль
     if (key === "пароль") return undefined;
 
-    // Преобразуем дату
-    if (key === "создан") return value.toISOString();
+    // Date.toJSON уже превратил дату в ISO-строку до вызова replacer.
 
     return value;
   },
@@ -99,6 +98,8 @@ const jsonWithoutPassword = JSON.stringify(
 
 console.log(jsonWithoutPassword);
 ```
+
+Date.toJSON вызывается перед replacer: функция получает уже строку даты. JSON поддерживает не только объекты, но и массивы, строки, числа, boolean и null. BigInt и циклические ссылки по умолчанию вызывают TypeError; NaN и Infinity сериализуются как null. undefined в объекте пропускается, а в массиве заменяется null.
 
 ### 🎯 Ограничения JSON
 
@@ -141,7 +142,7 @@ console.log(object.name); // "Мария"
 ### 🎯 Обработка ошибок парсинга
 
 ```javascript
-const invalidJson = '{"name":"Анна","возраст":25}'; // Пропущена закрывающая скобка
+const invalidJson = '{"name":"Анна","возраст":25'; // Пропущена закрывающая скобка
 
 function safeParse(json) {
   try {
@@ -165,7 +166,7 @@ const jsonWithDate =
 function parseWithDates(json) {
   return JSON.parse(json, (key, value) => {
     // Восстанавливаем даты
-    if (typeof value === "string" && value.match(/^\d{4}-\d{2}-\d{2}T/)) {
+    if (key === "создан" && typeof value === "string" && /^\d{4}-\d{2}-\d{2}T/.test(value)) {
       return new Date(value);
     }
     return value;
@@ -323,7 +324,11 @@ async function deleteUser(id) {
 deleteUser(1);
 ```
 
+Относительные URL /api/... требуют вашего сервера. JSONPlaceholder имитирует запись данных и не хранит ваши изменения. fetch не считает HTTP 404/500 сетевой ошибкой: перед response.json() проверяйте response.ok.
+
 ## 💾 LocalStorage и SessionStorage
+
+Используйте отдельную учебную страницу. Хранилище относится к origin сайта; пример не должен очищать чужие ключи. Данные из хранилища нужно не только разобрать как JSON, но и проверить по ожидаемой структуре.
 
 ### 🎯 LocalStorage - хранилище браузера
 
@@ -357,8 +362,8 @@ function getUser() {
 // Удаление данных
 localStorage.removeItem("user");
 
-// Очистка всего хранилища
-localStorage.clear();
+// localStorage.clear() очищает всё хранилище этого сайта.
+// Для учебного примера удаляйте только собственный ключ через removeItem.
 ```
 
 ### 🎯 SessionStorage - временное хранилище
@@ -385,7 +390,7 @@ function increaseViews() {
 }
 
 // Вызываем при каждой загрузке страницы
-увеличить_просмотры();
+increaseViews();
 ```
 
 ### 🎯 Работа с хранилищем через класс
@@ -454,7 +459,8 @@ class Cart {
   load() {
     try {
       const data = localStorage.getItem(this.key);
-      return data ? JSON.parse(data) : [];
+      const parsed = data ? JSON.parse(data) : [];
+      return Array.isArray(parsed) ? parsed : [];
     } catch (error) {
       console.error("Ошибка загрузки корзины:", error);
       return [];
@@ -470,14 +476,16 @@ class Cart {
   }
 
   add(item) {
+    const quantity = item.quantity ?? 1;
+    if (!Number.isInteger(quantity) || quantity <= 0) throw new RangeError("Количество должно быть положительным целым");
     const existing = this.items.find((i) => i.id === item.id);
 
     if (existing) {
-      existing.quantity += item.quantity || 1;
+      existing.quantity += quantity;
     } else {
       this.items.push({
         ...item,
-        quantity: item.quantity || 1,
+        quantity,
         added: new Date().toISOString(),
       });
     }
@@ -542,17 +550,10 @@ class APIClient {
   async request(path, options = {}) {
     const url = `${this.baseUrl}${path}`;
 
-    const settings = {
-      headers: {
-        "Content-Type": "application/json",
-        ...options.headers,
-      },
-      ...options,
-    };
-
-    if (this.token) {
-      settings.headers["Authorization"] = `Bearer ${this.token}`;
-    }
+    const headers = new Headers(options.headers);
+    if (!headers.has("Content-Type")) headers.set("Content-Type", "application/json");
+    if (this.token) headers.set("Authorization", `Bearer ${this.token}`);
+    const settings = { ...options, headers };
 
     try {
       const response = await fetch(url, settings);
@@ -566,6 +567,7 @@ class APIClient {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
+      if (response.status === 204) return null;
       const data = await response.json();
       return data;
     } catch (error) {
@@ -640,106 +642,60 @@ api
 ### 📊 Кэширование данных
 
 ```javascript
+// APIClient определён в предыдущем примере.
 class Cache {
-  constructor(prefix = "cache_") {
+  constructor(prefix = "js-beginners:cache:") {
     this.prefix = prefix;
-    this.lifetime = 5 * 60 * 1000; // 5 минут
+    this.lifetime = 5 * 60 * 1000;
   }
-
-  _key(key) {
-    return `${this.prefix}${key}`;
+  _key(key) { return this.prefix + key; }
+  set(key, value) {
+    localStorage.setItem(this._key(key), JSON.stringify({ value, time: Date.now() }));
   }
-
-  _истек(data) {
-    return Date.now() - data.время > this.время_жизни;
-  }
-
-  установить(key, значение) {
-    const data = {
-      значение,
-      время: Date.now(),
-    };
-
-    localStorage.setItem(this._ключ(key), JSON.stringify(data));
-  }
-
-  получить(key) {
+  get(key) {
     try {
-      const data = localStorage.getItem(this._ключ(key));
-      if (!data) return null;
-
-      const parsed = JSON.parse(data);
-
-      if (this._expired(parsed)) {
+      const raw = localStorage.getItem(this._key(key));
+      if (raw === null) return null;
+      const entry = JSON.parse(raw);
+      if (!entry || !Number.isFinite(entry.time) || Date.now() - entry.time >= this.lifetime) {
         this.delete(key);
         return null;
       }
-
-      return parsed.value;
-    } catch (ошибка) {
-      console.error("Ошибка получения из кэша:", ошибка);
+      return entry.value;
+    } catch (error) {
+      console.error("Не удалось прочитать кэш:", error.message);
       return null;
     }
   }
-
-  удалить(ключ) {
-    localStorage.removeItem(this._ключ(ключ));
-  }
-
-  очистить() {
-    const keys = Object.keys(localStorage);
-    keys.forEach((key) => {
-      if (key.startsWith(this.префикс)) {
-        localStorage.removeItem(key);
-      }
-    });
+  delete(key) { localStorage.removeItem(this._key(key)); }
+  clear() {
+    const keys = Array.from({ length: localStorage.length }, (_, i) => localStorage.key(i));
+    for (const key of keys) if (key.startsWith(this.prefix)) localStorage.removeItem(key);
   }
 }
-
-// Использование с API
-class КэшированныйAPI extends APIКлиент {
-  constructor(базовый_url) {
-    super(базовый_url);
-    this.кэш = new Кэш();
+class CachedAPI extends APIClient {
+  constructor(baseUrl) {
+    super(baseUrl);
+    this.cache = new Cache();
   }
-
-  async getCached(path, использовать_кэш = true) {
-    // Пытаемся получить из кэша
-    if (использовать_кэш) {
-      const cached = this.кэш.получить(path);
-      if (cached) {
-        console.log(`Данные для ${path} из кэша`);
-        return cached;
-      }
+  async getCached(path, useCache = true) {
+    if (useCache) {
+      const cached = this.cache.get(path);
+      if (cached !== null) return cached; // Сохраняем 0, false и пустую строку
     }
-
-    // Загружаем с сервера
-    console.log(`Загружаем data для ${path} с сервера`);
     const data = await this.get(path);
-
-    // Сохраняем в кэш
-    this.кэш.установить(path, data);
-
+    try { this.cache.set(path, data); }
+    catch (error) { console.warn("Не удалось записать кэш:", error.message); }
     return data;
   }
 }
-
-// Использование
-const cachedAPI = new КэшированныйAPI(
-  "https://jsonplaceholder.typicode.com",
-);
-
-// Первый запрос - с сервера
-cachedAPI
-  .getCached("/users/1")
-  .then((user) => console.log("Первый запрос:", user));
-
-// Второй запрос - из кэша (быстро!)
-setTimeout(() => {
-  cachedAPI
-    .getCached("/users/1")
-    .then((user) => console.log("Второй запрос:", user));
-}, 1000);
+async function cacheExample() {
+  const api = new CachedAPI("https://jsonplaceholder.typicode.com");
+  console.log(await api.getCached("/users/1")); // Первый запрос завершён
+  console.log(await api.getCached("/users/1")); // Теперь можно использовать кэш
+}
+cacheExample().catch(console.error);
+// В этом учебном API null означает отсутствие записи; данные предполагаются JSON-совместимыми.
 ```
 
 ## 🚨 Частые ошибки новичков
@@ -772,7 +728,7 @@ const name2 = object.name; // "Анна"
 ### ❌ Обработка ошибок JSON
 
 ```javascript
-const invalidJson = '{"name":"Анна"}'; // Пропущена закрывающая скобка
+const invalidJson = '{"name":"Анна"'; // Пропущена закрывающая скобка
 
 // ❌ ПЛОХО - нет обработки ошибок
 const data = JSON.parse(invalidJson); // Выбросит ошибку!
@@ -836,6 +792,7 @@ console.log("Восстановленный:", restored);
 async function getUsers() {
   try {
     const response = await fetch("https://jsonplaceholder.typicode.com/users");
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const users = await response.json();
     console.log("Пользователи:", users.slice(0, 3));
 
@@ -897,6 +854,7 @@ async function createPost() {
       body: JSON.stringify(post),
     });
 
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const created = await response.json();
     console.log("Создан пост:", created);
 
@@ -920,7 +878,7 @@ function safeJSONParse(jsonString) {
 }
 
 const goodJSON = '{"name":"Анна"}';
-const badJSON = '{"name":"Анна"}';
+const badJSON = '{"name":"Анна"';
 
 console.log("Хороший JSON:", safeJSONParse(goodJSON));
 console.log("Плохой JSON:", safeJSONParse(badJSON));
@@ -956,6 +914,12 @@ createPost();
 **Запомни главное:** JSON - это универсальный формат для обмена данными между системами! Используй `JSON.stringify()` для отправки данных и `JSON.parse()` для получения. LocalStorage поможет сохранять data между сессиями. 🌐
 
 Работа с API и JSON - это как общение на разных языках через переводчика! 🗣️📝
+
+## Документация
+
+- [JSON.stringify — MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/stringify)
+- [Использование Fetch — MDN](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch)
+
 
 ---
 

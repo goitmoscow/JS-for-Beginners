@@ -26,7 +26,8 @@ function add(a, b) {
 }
 
 // Стрелочная функция
-const add = (a, b) => a + b;
+const addArrow = (a, b) => a + b;
+console.log(add(2, 3), addArrow(2, 3)); // 5 5
 ```
 
 ### 🎯 Разные формы стрелочных функций
@@ -56,7 +57,7 @@ const object = {
   name: "Анна",
   showRegular: function () {
     setTimeout(function () {
-      console.log(this.name); // undefined (this = window)
+      console.log(this.name); // В браузере this = window, не object; значение зависит от window.name
     }, 1000);
   },
 };
@@ -452,7 +453,7 @@ function createCart() {
 
     getSummary: function () {
       return {
-        items: [...items], // Копия для защиты
+        items: items.map((item) => ({ ...item })), // Копируем и сами записи
         totalSum: totalPrice,
         itemCount: items.reduce(
           (sum, item) => sum + item.quantity,
@@ -487,7 +488,7 @@ function createGameCounter() {
   return {
     addScore: function (points) {
       score += points;
-      if (score >= level * 100) {
+      while (score >= level * 100) {
         level++;
         life++;
         console.log(`🎉 Новый уровень: ${level}, Жизни: ${life}`);
@@ -528,7 +529,9 @@ function createComponent(name) {
   return {
     render: function (container) {
       element = document.createElement("div");
-      element.innerHTML = `<h1>${name}</h1>`;
+      const heading = document.createElement("h1");
+      heading.textContent = name;
+      element.replaceChildren(heading);
       container.appendChild(element);
       return element;
     },
@@ -536,7 +539,7 @@ function createComponent(name) {
     setState: function (newState) {
       state = { ...state, ...newState };
       if (element) {
-        element.innerHTML = `<h1>${name} - ${JSON.stringify(state)}</h1>`;
+        element.querySelector("h1").textContent = `${name} - ${JSON.stringify(state)}`;
       }
     },
 
@@ -561,7 +564,7 @@ const object = {
 
   // ❌ ПЛОХО - стрелочная функция не имеет своего this
   show: () => {
-    console.log(this.value); // undefined
+    console.log(this.value); // this взят снаружи: значение зависит от среды; в модуле возможен TypeError
   },
 
   // ✅ ХОРОШО - обычная функция
@@ -632,7 +635,7 @@ console.log("Квадраты:", squares);
 function createMemo() {
   let memory = [];
   return function (value) {
-    memory.push(value);
+    if (arguments.length > 0) memory.push(value);
     return memory.slice(); // возвращаем копию
   };
 }

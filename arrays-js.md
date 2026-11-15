@@ -179,6 +179,8 @@ let combined2 = [...array1, ...array2]; // [1, 2, 3, 4, 5, 6]
 let mixed = [0, ...array1, 99, ...array2, 100]; // [0, 1, 2, 3, 99, 4, 5, 6, 100]
 ```
 
+map/filter/slice создают поверхностные копии: объекты внутри могут оставаться общими. sort, reverse, splice, push и pop меняют исходный массив. Если нужна сортировка копии, используйте toSorted((a, b) => a - b) или slice().sort((a, b) => a - b).
+
 ## 🏃 Обход массивов
 
 ### 🔄 forEach() - выполнить действие для каждого элемента
@@ -249,6 +251,8 @@ let maximum = numbers.reduce((max, number) => (max > number ? max : number));
 console.log(maximum); // 5
 ```
 
+Без начального значения reduce выбросит TypeError на пустом массиве. Для суммы укажите 0, для произведения — 1; максимум пустого набора требует отдельного соглашения.
+
 ### ✅ every() и some() - проверки
 
 ```javascript
@@ -262,6 +266,8 @@ let allGreaterThan5 = numbers.every((number) => number > 5); // false
 let hasGreaterThan5 = numbers.some((number) => number > 5); // true
 let hasOdd = numbers.some((number) => number % 2 !== 0); // false
 ```
+
+На пустом массиве some возвращает false, every — true. forEach возвращает undefined; return внутри callback не завершает внешнюю функцию.
 
 ## 🎯 Практические примеры
 
@@ -284,7 +290,7 @@ let totalPrice = cart.reduce(
   (sum, item) => sum + item.price * item.quantity,
   0,
 );
-console.log(`Общая стоимость: ${totalPrice} руб`); // 235
+console.log(`Общая стоимость: ${totalPrice} руб`); // 265
 
 // Получить названия товаров
 let names = cart.map((item) => item.title);
@@ -448,7 +454,7 @@ const students = [
 3. Отсортируй студентов по оценке (от лучшей к худшей)
 
 ### Задание 3: Разбить на группы
-Напиши функцию `chunk(array, size)`, которая разбивает массив на подмассивы заданного размера.
+Напиши функцию `chunk(array, size)`, которая разбивает массив на подмассивы заданного размера. size должен быть положительным целым; иначе выброси RangeError. Пустой массив даёт [].
 ```javascript
 chunk([1, 2, 3, 4, 5], 2);    // [[1, 2], [3, 4], [5]]
 chunk([1, 2, 3, 4, 5, 6], 3); // [[1, 2, 3], [4, 5, 6]]
